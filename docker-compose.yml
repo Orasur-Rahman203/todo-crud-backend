@@ -1,0 +1,55 @@
+services:
+  users-crud-frontend:
+    image: srbon444/users-crud-frontend:latest
+    container_name: users-crud-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    restart: unless-stopped
+    networks:
+      - user-crud-network
+    depends_on:
+      - user-crud-backend
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: user-crud-postgres
+    environment:
+      POSTGRES_DB: user-data
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - user-crud-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-crud-backend:
+    image: srbon444/user-crud-backend:latest
+    container_name: user-crud-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    ports:
+      - "3001:3000"
+    networks:
+      - user-crud-network
+    restart: unless-stopped
+
+networks:
+  user-crud-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
